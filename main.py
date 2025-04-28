@@ -54,13 +54,35 @@ def chat(request: ChatRequest):
         pending = pending_tools[request.session_id]
         user_msg = request.message.strip().lower()
         if user_msg.startswith("[terminal confirm]: yes"):
-            # User accepted, run the command
-            output = run_terminal_command(pending['command'])
-            # Remove pending
-            del pending_tools[request.session_id]
-            # Add result to chat and log
-            sessions[request.session_id].append({"role": "assistant", "content": f"[Terminal Output]:\n{output}"})
-            log_step(request.session_id, "terminal_executed", {"command": pending['command'], "output": output})
+            try:
+                # User accepted, run the command
+                output = run_terminal_command(pending['command'])
+                # Remove pending
+                del pending_tools[request.session_id]
+                # Add terminal output to chat and log
+                sessions[request.session_id].append({"role": "assistant", "content": f"[Terminal Output]:\n{output}"})
+                log_step(request.session_id, "terminal_executed", {"command": pending['command'], "output": output})
+            except Exception as e:
+                error_message = f"Error executing terminal command: {str(e)}"
+                log_step(request.session_id, "terminal_error", {"command": pending['command'], "error": error_message})
+                sessions[request.session_id].append({"role": "assistant", "content": error_message})
+                del pending_tools[request.session_id] # Ensure pending is cleared
+                messages = [ChatMessage(**m) for m in sessions[request.session_id]]
+                return ChatResponse(session_id=request.session_id, messages=messages)
+
+            try:
+                # Re-invoke the agent with terminal tool disabled so it can reason over the output, but not chain terminal calls
+                agent_reply, tool_request = run_agent_with_tool_intercept(sessions[request.session_id], request.session_id, log_func=log_step, disable_terminal_tool=True)
+                sessions[request.session_id].append({"role": "assistant", "content": agent_reply})
+                log_step(request.session_id, "assistant_reply", {"content": agent_reply})
+            except Exception as e:
+                error_message = f"Error during agent follow-up after terminal execution: {str(e)}"
+                log_step(request.session_id, "agent_followup_error", {"error": error_message})
+                sessions[request.session_id].append({"role": "assistant", "content": error_message})
+            
+            # Always return the session messages after attempting the follow-up
+            messages = [ChatMessage(**m) for m in sessions[request.session_id]]
+            return ChatResponse(session_id=request.session_id, messages=messages)
         else:
             # User rejected
             del pending_tools[request.session_id]
