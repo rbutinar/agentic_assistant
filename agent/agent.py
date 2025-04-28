@@ -1,13 +1,14 @@
 from langchain.agents import initialize_agent, AgentType
 from langchain_community.chat_models import AzureChatOpenAI
 from langchain.memory import ConversationBufferMemory
-from .tools import tool_list
+from langchain.tools import Tool
+from .tools import run_terminal_command, search_tool
 from .callbacks import FileLoggingCallbackHandler
 import os
 import re
 import io
 import sys
-from typing import Tuple
+from typing import Tuple, Optional, Dict, List, Any
 from dotenv import load_dotenv
 
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
@@ -35,91 +36,107 @@ llm = AzureChatOpenAI(
     deployment_name=AZURE_OPENAI_DEPLOYMENT,
 )
 
-# Setup general-purpose memory
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+def execute_agent_turn(
+    user_input: str,
+    chat_history_messages: List[Dict[str, str]], 
+    safe_mode: bool,
+    session_id: str,
+    log_func: Optional[callable] = None
+) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
+    """
+    Executes a single turn of the agent interaction, handling safe mode for the terminal tool.
 
-# Use the recommended conversational agent type for memory
-agent_executor = initialize_agent(
-    tools=tool_list,
-    llm=llm,
-    agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
-    verbose=True,
-    memory=memory,
-    system_message=SYSTEM_PROMPT,
-    handle_parsing_errors=True
-)
+    Args:
+        user_input: The latest message from the user.
+        chat_history_messages: The history of the conversation.
+        safe_mode: Boolean indicating if safe mode is enabled for this turn.
+        session_id: The ID of the current session.
+        log_func: Optional logging function.
 
-# Intercept tool use for terminal tool (updated for conversational agent)
-def run_agent_with_tool_intercept(chat_history, session_id, log_func, disable_terminal_tool=False):
-    # Load environment variables (should ideally be loaded once globally)
-    load_dotenv()
-    AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
-    # Log received chat history
-    try:
-        history_summary = [{'role': msg.get('role', 'unknown'), 'content': msg.get('content', '')[:70] + ('...' if len(msg.get('content', '')) > 70 else '')} for msg in chat_history]
-        log_func(session_id, "debug_received_history", {"history_preview": history_summary, "message_count": len(chat_history)})
-    except Exception as log_ex:
-        log_func(session_id, "debug_log_error", {"error": str(log_ex)})
-    # Create a new memory instance FOR EACH CALL
-    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-
-    user_input = chat_history[-1]["content"] if chat_history else ""
+    Returns:
+        A tuple containing:
+        - The agent's text response (str) or None if confirmation is needed.
+        - A dictionary with pending command info (if confirmation needed) or None.
+          Format: {"tool": "terminal", "command": "the_command"}
+    """
     if log_func:
-        log_func(session_id, "agent_start", {"input": user_input})
+        log_func(session_id, "agent_turn_start", {"input": user_input, "safe_mode": safe_mode})
 
-    # Create the callback handler instance for this run
-    callback_handler = FileLoggingCallbackHandler(session_id=session_id)
-    callbacks = [callback_handler]
-
-    # Optionally disable terminal tool for this turn
-    if disable_terminal_tool:
-        tools = [t for t in tool_list if t.name != "terminal"]
-        agent_executor_no_terminal = initialize_agent(
-            tools=tools,
-            llm=llm,
-            agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
-            verbose=True,
-            memory=memory,
-            system_message=SYSTEM_PROMPT,
+    # --- Create Tool List Dynamically Based on Safe Mode ---
+    if safe_mode:
+        # In safe mode, terminal tool returns a confirmation string instead of executing
+        safe_terminal_func = lambda command: f"__CONFIRM_TERMINAL__:{command}"
+        current_terminal_tool = Tool(
+            name="terminal",
+            func=safe_terminal_func,
+            description="Proposes a terminal command for execution (requires confirmation). Use this to suggest commands like ls, pwd, etc." 
         )
-        result = agent_executor_no_terminal.invoke({"input": user_input}, config={"callbacks": callbacks})
     else:
-        # Initialize agent executor with the per-call memory instance
-        # This ensures session separation
-        current_agent_executor = initialize_agent(
-            tools=tool_list,
-            llm=llm,
-            agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
-            verbose=True,
-            memory=memory,  # Use the memory created for this call
-            system_message=SYSTEM_PROMPT,
-            handle_parsing_errors=True
+        # In normal mode, terminal tool executes the command directly
+        current_terminal_tool = Tool(
+            name="terminal",
+            func=run_terminal_command, 
+            description="Executes a terminal command directly and returns the output." 
         )
-        old_stdout = sys.stdout
-        sys.stdout = mystdout = io.StringIO()
-        try:
-            # Use the newly initialized executor for this call
-            result = current_agent_executor.invoke({"input": user_input}, config={"callbacks": callbacks})
-        finally:
-            sys.stdout = old_stdout
-    # Check for special signal from safe terminal tool
-    output_text = result.get('output', '')
-    if isinstance(output_text, str) and output_text.startswith("__CONFIRM_TERMINAL__:"):
-        command = output_text[len("__CONFIRM_TERMINAL__:"):].strip()
-        if log_func:
-            log_func(session_id, "terminal_intercepted", {"command": command})
-        return (None, {"tool": "terminal", "command": command})
-    # Otherwise, normal agent reply
-    if log_func:
-        log_func(session_id, "agent_end", {"output": output_text})
-    return (output_text, None)
 
-# Standard run_agent (unchanged)
-def run_agent(messages, session_id, log_func=None):
-    user_input = messages[-1]["content"] if messages else ""
-    if log_func:
-        log_func(session_id, "agent_start", {"input": user_input})
-    result = agent_executor.run(user_input)
-    if log_func:
-        log_func(session_id, "agent_end", {"output": result})
-    return result
+    # Include other tools (assuming search_tool is defined in tools.py)
+    current_tools = [current_terminal_tool, search_tool]
+
+    # --- Setup Memory for this turn ---
+    # Note: Langchain memory needs proper handling for conversational context loading.
+    # This example assumes simple ConversationBufferMemory re-creation per turn,
+    # which might lose context if not managed correctly by the caller loading `chat_history_messages`.
+    # A better approach involves loading the history into the memory object.
+    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, input_key="input")
+    # TODO: Properly load `chat_history_messages` into `memory` object before agent invocation.
+    # Example (may need adjustment based on message format):
+    # for msg in chat_history_messages:
+    #     if msg['role'] == 'user':
+    #         memory.chat_memory.add_user_message(msg['content'])
+    #     elif msg['role'] == 'assistant':
+    #         memory.chat_memory.add_ai_message(msg['content'])
+
+    # --- Initialize Agent Executor for this turn ---
+    callback_handler = FileLoggingCallbackHandler(session_id=session_id) if log_func else None
+    callbacks = [callback_handler] if callback_handler else None
+
+    current_agent_executor = initialize_agent(
+        tools=current_tools,
+        llm=llm,
+        agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+        verbose=True, 
+        memory=memory,
+        agent_kwargs={"system_message": SYSTEM_PROMPT}, 
+        handle_parsing_errors=True,
+    )
+
+    # --- Invoke Agent ---
+    try:
+        # Redirect stdout only if needed for debugging agent internal thoughts
+        # old_stdout = sys.stdout
+        # sys.stdout = mystdout = io.StringIO()
+        result = current_agent_executor.invoke({"input": user_input}, config={"callbacks": callbacks})
+        agent_output = result.get('output', '')
+        # sys.stdout = old_stdout # Restore stdout
+        # captured_stdout = mystdout.getvalue() # Get captured output if needed
+
+    except Exception as e:
+        if log_func:
+            log_func(session_id, "agent_error", {"error": str(e)})
+        return (f"An error occurred: {e}", None)
+
+    # --- Process Result ---
+    pending_command_info = None
+    final_output = agent_output
+
+    if isinstance(agent_output, str) and agent_output.startswith("__CONFIRM_TERMINAL__:"):
+        command = agent_output[len("__CONFIRM_TERMINAL__:"):].strip()
+        pending_command_info = {"tool": "terminal", "command": command}
+        final_output = None # No text response when asking for confirmation
+        if log_func:
+            log_func(session_id, "terminal_confirmation_pending", {"command": command})
+    else:
+        if log_func:
+            log_func(session_id, "agent_turn_end", {"output": agent_output})
+
+    return (final_output, pending_command_info)

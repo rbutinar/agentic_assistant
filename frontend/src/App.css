@@ -30,6 +30,19 @@ header h1 {
   color: #2d3748;
 }
 
+header > div {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.safe-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
 .new-session-btn {
   background: #4f8cff;
   color: #fff;
@@ -76,9 +89,68 @@ header h1 {
   max-width: 80%;
   word-break: break-word;
   font-size: 1rem;
+  white-space: pre-wrap; /* Ensure preformatted text wraps */
 }
 .chat-message.assistant .content {
   background: #e6f9ea;
+}
+
+.terminal-request {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 15px;
+  background-color: #f7fafc;
+  flex-direction: column; /* Stack elements vertically */
+  align-items: stretch; /* Stretch children */
+}
+.terminal-request .role {
+  color: #dd6b20; /* Orange color for pending action */
+}
+.terminal-request p {
+  margin: 8px 0;
+  color: #4a5568;
+}
+.terminal-block {
+  background-color: #2d3748; /* Dark background */
+  color: #f7fafc; /* Light text */
+  padding: 10px 15px;
+  border-radius: 6px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-bottom: 15px;
+}
+.terminal-actions {
+  display: flex;
+  justify-content: flex-end; /* Align buttons to the right */
+  gap: 10px; /* Space between buttons */
+}
+.terminal-actions button {
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+.terminal-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.confirm-btn {
+  background-color: #38a169; /* Green */
+  color: white;
+}
+.confirm-btn:hover:not(:disabled) {
+  background-color: #2f855a;
+}
+.dismiss-btn {
+  background-color: #e53e3e; /* Red */
+  color: white;
+}
+.dismiss-btn:hover:not(:disabled) {
+  background-color: #c53030;
 }
 
 .input-form {
