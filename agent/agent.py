@@ -2,6 +2,7 @@ from langchain.agents import initialize_agent, AgentType
 from langchain_community.chat_models import AzureChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from .tools import tool_list
+from .callbacks import FileLoggingCallbackHandler
 import os
 import re
 import io
@@ -57,6 +58,11 @@ def run_agent_with_tool_intercept(messages, session_id, log_func=None, disable_t
     user_input = messages[-1]["content"] if messages else ""
     if log_func:
         log_func(session_id, "agent_start", {"input": user_input})
+
+    # Create the callback handler instance for this run
+    callback_handler = FileLoggingCallbackHandler(session_id=session_id)
+    callbacks = [callback_handler]
+
     # Optionally disable terminal tool for this turn
     if disable_terminal_tool:
         tools = [t for t in tool_list if t.name != "terminal"]
@@ -68,12 +74,12 @@ def run_agent_with_tool_intercept(messages, session_id, log_func=None, disable_t
             memory=memory,
             system_message=SYSTEM_PROMPT,
         )
-        result = agent_executor_no_terminal.invoke({"input": user_input}, include_intermediate_steps=True)
+        result = agent_executor_no_terminal.invoke({"input": user_input}, config={"callbacks": callbacks})
     else:
         old_stdout = sys.stdout
         sys.stdout = mystdout = io.StringIO()
         try:
-            result = agent_executor.invoke({"input": user_input}, include_intermediate_steps=True)
+            result = agent_executor.invoke({"input": user_input}, config={"callbacks": callbacks})
         finally:
             sys.stdout = old_stdout
     # Check for special signal from safe terminal tool
