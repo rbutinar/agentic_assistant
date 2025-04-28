@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Node/React
+frontend/node_modules/
+frontend/build/
+
+# VSCode and IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Playwright
+playwright-report/
+
+# Misc
+*.log
