@@ -8,6 +8,7 @@ import re
 import io
 import sys
 from typing import Tuple
+from dotenv import load_dotenv
 
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_KEY = os.getenv("AZURE_OPENAI_KEY")
@@ -49,13 +50,20 @@ agent_executor = initialize_agent(
 )
 
 # Intercept tool use for terminal tool (updated for conversational agent)
-def run_agent_with_tool_intercept(messages, session_id, log_func=None, disable_terminal_tool=False) -> Tuple[str, dict]:
-    """
-    Runs the agent, but intercepts if a terminal tool is about to be used.
-    Returns (reply, tool_request_dict or None)
-    If disable_terminal_tool is True, the terminal tool is not available for this turn.
-    """
-    user_input = messages[-1]["content"] if messages else ""
+def run_agent_with_tool_intercept(chat_history, session_id, log_func, disable_terminal_tool=False):
+    # Load environment variables (should ideally be loaded once globally)
+    load_dotenv()
+    AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
+    # Log received chat history
+    try:
+        history_summary = [{'role': msg.get('role', 'unknown'), 'content': msg.get('content', '')[:70] + ('...' if len(msg.get('content', '')) > 70 else '')} for msg in chat_history]
+        log_func(session_id, "debug_received_history", {"history_preview": history_summary, "message_count": len(chat_history)})
+    except Exception as log_ex:
+        log_func(session_id, "debug_log_error", {"error": str(log_ex)})
+    # Create a new memory instance FOR EACH CALL
+    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+
+    user_input = chat_history[-1]["content"] if chat_history else ""
     if log_func:
         log_func(session_id, "agent_start", {"input": user_input})
 
@@ -76,10 +84,22 @@ def run_agent_with_tool_intercept(messages, session_id, log_func=None, disable_t
         )
         result = agent_executor_no_terminal.invoke({"input": user_input}, config={"callbacks": callbacks})
     else:
+        # Initialize agent executor with the per-call memory instance
+        # This ensures session separation
+        current_agent_executor = initialize_agent(
+            tools=tool_list,
+            llm=llm,
+            agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+            verbose=True,
+            memory=memory,  # Use the memory created for this call
+            system_message=SYSTEM_PROMPT,
+            handle_parsing_errors=True
+        )
         old_stdout = sys.stdout
         sys.stdout = mystdout = io.StringIO()
         try:
-            result = agent_executor.invoke({"input": user_input}, config={"callbacks": callbacks})
+            # Use the newly initialized executor for this call
+            result = current_agent_executor.invoke({"input": user_input}, config={"callbacks": callbacks})
         finally:
             sys.stdout = old_stdout
     # Check for special signal from safe terminal tool
