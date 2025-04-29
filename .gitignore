@@ -25,3 +25,4 @@ playwright-report/
 # Misc
 *.log
 !agent/agent_session.log
+agent/agent_session.log
