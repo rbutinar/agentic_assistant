@@ -1,6 +1,9 @@
 fastapi
-uvicorn
-dotenv
+uvicorn[standard]
+python-dotenv
 langchain
+langchain-openai
+langgraph 
 httpx
+langchain_community 
 pytest

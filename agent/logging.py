@@ -13,13 +13,22 @@ LOG_FILENAME = "agent_session.log"
 LOG_DIRECTORY = os.path.dirname(__file__) # Log in the same directory as logging.py
 LOG_FILEPATH = os.path.join(LOG_DIRECTORY, LOG_FILENAME)
 
+print(f"--- DEBUG: Attempting to log to: {LOG_FILEPATH} ---") # Print the path
+
 # Configure the logger
 agent_logger = logging.getLogger("agent_session")
 agent_logger.setLevel(logging.INFO) # Set the minimum level to log
 
 # Prevent adding multiple handlers if this module is reloaded
-if not agent_logger.hasHandlers():
-    # Create file handler
+# Temporarily removed for debugging:
+# if not agent_logger.hasHandlers():
+
+# Ensure handlers are cleared first if re-running in same process (e.g. notebook)
+for handler in agent_logger.handlers[:]:
+    agent_logger.removeHandler(handler)
+
+# Create file handler
+try:
     file_handler = logging.FileHandler(LOG_FILEPATH)
     file_handler.setLevel(logging.INFO)
 
@@ -30,6 +39,9 @@ if not agent_logger.hasHandlers():
 
     # Add the handler to the logger
     agent_logger.addHandler(file_handler)
+    print("--- DEBUG: File handler added successfully. ---")
+except Exception as e:
+    print(f"--- DEBUG: FAILED to add file handler: {e} ---")
 # --- End File logging setup ---
 
 def log_step(session_id: str, step_type: str, data: Any):
@@ -40,7 +52,14 @@ def log_step(session_id: str, step_type: str, data: Any):
     except TypeError:
         data_str = str(data) # Fallback to string representation
     log_message = f"Session [{session_id}] - Type [{step_type}] - Data: {data_str}"
-    agent_logger.info(log_message)
+    try:
+        agent_logger.info(log_message)
+        # Explicitly flush the handler
+        for handler in agent_logger.handlers:
+            if isinstance(handler, logging.FileHandler):
+                handler.flush()
+    except Exception as e:
+        print(f"--- DEBUG: FAILED to log message: {e} ---")
 
     # 2. Log to in-memory (existing behavior)
     with _lock:

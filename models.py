@@ -17,6 +17,7 @@ class ChatResponse(BaseModel):
     session_id: str
     messages: List[ChatMessage]
     pending_command: Optional[str] = None
+    proposed_command: Optional[str] = None
 
 class LogEntry(BaseModel):
     type: str
