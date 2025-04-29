@@ -88,13 +88,11 @@ def execute_agent_turn(
     # which might lose context if not managed correctly by the caller loading `chat_history_messages`.
     # A better approach involves loading the history into the memory object.
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, input_key="input")
-    # TODO: Properly load `chat_history_messages` into `memory` object before agent invocation.
-    # Example (may need adjustment based on message format):
-    # for msg in chat_history_messages:
-    #     if msg['role'] == 'user':
-    #         memory.chat_memory.add_user_message(msg['content'])
-    #     elif msg['role'] == 'assistant':
-    #         memory.chat_memory.add_ai_message(msg['content'])
+    for msg in chat_history_messages:
+        if msg['role'] == 'user':
+            memory.chat_memory.add_user_message(msg['content'])
+        elif msg['role'] == 'assistant':
+            memory.chat_memory.add_ai_message(msg['content'])
 
     # --- Initialize Agent Executor for this turn ---
     callback_handler = FileLoggingCallbackHandler(session_id=session_id) if log_func else None
