@@ -35,6 +35,36 @@ To run backend tests:
 pytest test_health.py
 ```
 
+### Frontend Setup (React)
+
+#### Requirements
+- Node.js 18+
+- npm (Node package manager)
+
+#### Installation
+1. Dal terminale, vai nella cartella `frontend`:
+   ```sh
+   cd frontend
+   ```
+2. Installa le dipendenze principali e le librerie per il rendering markdown:
+   ```sh
+   npm install
+   npm install react-markdown remark-gfm rehype-sanitize
+   ```
+
+#### Avvio del frontend
+Esegui:
+```sh
+npm start
+```
+
+#### Librerie React aggiuntive usate
+- `react-markdown`: per il rendering sicuro e flessibile del markdown nelle risposte dell'assistente
+- `remark-gfm`: per supporto a tabelle, liste di task e altre estensioni GitHub Flavored Markdown
+- `rehype-sanitize`: per la sicurezza del rendering HTML/markdown
+
+Le tabelle, il codice e altri elementi markdown saranno visualizzati in modo corretto e sicuro nel frontend.
+
 ## Backend: Conversation & Session Management (Step 2)
 
 ### Endpoints

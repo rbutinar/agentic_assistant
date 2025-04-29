@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import './App.css';
+import MarkdownMessage from './MarkdownMessage';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -128,7 +129,7 @@ function App() {
           <div key={idx} className={`chat-message ${msg.role}`}>
             <span className="role">{msg.role === 'user' ? 'You' : 'Assistant'}:</span>
             {msg.role === 'assistant' ? (
-              <pre className="content">{msg.content}</pre>
+              <MarkdownMessage content={msg.content} />
             ) : (
               <span className="content">{msg.content}</span>
             )}

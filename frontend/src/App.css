@@ -5,13 +5,14 @@ body {
 }
 
 .app-container {
-  max-width: 500px;
-  margin: 40px auto;
+  max-width: 1200px;
+  min-width: 800px;
+  min-height: 800px;
+  margin: 0 auto;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.08);
   padding: 0 0 20px 0;
-  min-height: 600px;
   display: flex;
   flex-direction: column;
 }
@@ -64,7 +65,8 @@ header > div {
   padding: 20px 20px 0 20px;
   background: #f8fafc;
   border-radius: 0 0 12px 12px;
-  min-height: 350px;
+  min-height: 600px;
+  max-width: 100%;
 }
 
 .chat-message {
@@ -180,4 +182,24 @@ header > div {
 .input-form button:disabled {
   background: #bcd1fa;
   cursor: not-allowed;
+}
+
+/* Markdown Table Styling */
+.markdown-message table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  width: 100%;
+  background: #fafbfc;
+}
+.markdown-message th, .markdown-message td {
+  border: 1px solid #b3b3b3;
+  padding: 8px 12px;
+  text-align: left;
+}
+.markdown-message th {
+  background: #eaeaea;
+  font-weight: bold;
+}
+.markdown-message tr:nth-child(even) td {
+  background: #f6f8fa;
 }
