@@ -7,3 +7,5 @@ langgraph
 httpx
 langchain_community 
 pytest
+sentence-transformers
+numpy
