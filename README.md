@@ -79,6 +79,36 @@ AZURE_OPENAI_API_VERSION=2023-03-15-preview  # Optional, default provided
 ### Error Handling
 - If the Azure OpenAI API call fails, the assistant will reply with an error message in the chat.
 
+## Semantic Knowledge Retrieval
+
+This agent supports **semantic knowledge retrieval** using the `sentence-transformers` library and cosine similarity. The knowledge base consists of `.txt` files in the `knowledge/` directory. When a user asks a question, the agent:
+
+- Embeds the user query and all knowledge topics.
+- Uses cosine similarity to find the most relevant topic.
+- Injects the matching knowledge into its reasoning context.
+- Logs every knowledge retrieval event (including the query, matched topic, and a snippet) in `agent/agent_session.log`.
+
+### Adding Knowledge
+- Place new `.txt` files in the `knowledge/` directory. The filename (without `.txt`) is used as the topic.
+- Example: `knowledge/whoami.txt` provides terminal instructions for identifying the current user.
+
+### Dependencies
+- `sentence-transformers` (for semantic embeddings)
+- `numpy` (for vector similarity)
+
+Both are included in `requirements.txt`.
+
+## Safe Mode & Terminal Commands
+
+- The agent can execute terminal commands via the backend.
+- **Safe Mode ON**: Commands require explicit user confirmation.
+- **Safe Mode OFF**: Commands execute directly (use with caution).
+- All command attempts and confirmations are logged.
+
+## Logging
+- All agent actions, knowledge retrievals, and tool usage are logged in `agent/agent_session.log`.
+- Logging is session-aware and includes timestamps, session IDs, and event data.
+
 ## Goals
 - Modular agentic architecture
 - Extensible tool/plugin system
