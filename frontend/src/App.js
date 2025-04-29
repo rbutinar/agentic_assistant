@@ -74,8 +74,25 @@ function App() {
         message: userReply,
         safe_mode: safeMode,
       });
-      setMessages(resp.data.messages);
-      setPendingTerminal(null);
+      
+      // Filter out any error messages that come after confirmation
+      const filteredMessages = resp.data.messages.filter(msg => 
+        !(msg.role === 'user' && 
+          typeof msg.content === 'string' && 
+          msg.content.startsWith('Error: Could not process confirmation'))
+      );
+      
+      setMessages(filteredMessages);
+
+      // Find the last assistant message in the response
+      const lastAssistantMsg = filteredMessages.slice().reverse().find(
+        m => m.role === "assistant"
+      );
+      
+      // Only clear pendingTerminal if a valid assistant message is present
+      if (lastAssistantMsg) {
+        setPendingTerminal(null);
+      }
     } finally {
       setLoading(false);
     }
