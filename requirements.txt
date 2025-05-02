@@ -10,3 +10,4 @@ pytest
 sentence-transformers
 numpy
 ms-fabric-cli
+gunicorn
