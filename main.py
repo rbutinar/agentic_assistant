@@ -9,6 +9,7 @@ from models import StartSessionResponse, ChatMessage, ChatRequest, ChatResponse,
 from agent.agent import run_graph_turn
 from agent.logging import log_step, get_session_log, clear_session_log, agent_logger
 from agent.tools import TerminalConfirmationRequired
+from fastapi.staticfiles import StaticFiles
 
 # Load environment variables from .env file
 load_dotenv()
@@ -36,6 +37,10 @@ app.add_middleware(
 sessions: Dict[str, List[dict]] = {}
 # In-memory pending tool actions (per session) - Still needed to track graph interrupts
 pending_tools: Dict[str, dict] = {}
+
+frontend_build_path = os.path.join(os.path.dirname(__file__), "frontend_build")
+if os.path.exists(frontend_build_path):
+    app.mount("/", StaticFiles(directory=frontend_build_path, html=True), name="static")
 
 @app.get("/health")
 def health_check():
