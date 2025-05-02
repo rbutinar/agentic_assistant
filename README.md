@@ -42,28 +42,28 @@ pytest test_health.py
 - npm (Node package manager)
 
 #### Installation
-1. Dal terminale, vai nella cartella `frontend`:
+1. In the terminal, go to the `frontend` folder:
    ```sh
    cd frontend
    ```
-2. Installa le dipendenze principali e le librerie per il rendering markdown:
+2. Install the main dependencies and libraries for markdown rendering:
    ```sh
    npm install
    npm install react-markdown remark-gfm rehype-sanitize
    ```
 
-#### Avvio del frontend
-Esegui:
+#### Starting the frontend
+Run:
 ```sh
 npm start
 ```
 
-#### Librerie React aggiuntive usate
-- `react-markdown`: per il rendering sicuro e flessibile del markdown nelle risposte dell'assistente
-- `remark-gfm`: per supporto a tabelle, liste di task e altre estensioni GitHub Flavored Markdown
-- `rehype-sanitize`: per la sicurezza del rendering HTML/markdown
+#### Additional React libraries used
+- `react-markdown`: for safe and flexible markdown rendering in assistant responses
+- `remark-gfm`: for support of tables, task lists, and other GitHub Flavored Markdown extensions
+- `rehype-sanitize`: for secure HTML/markdown rendering
 
-Le tabelle, il codice e altri elementi markdown saranno visualizzati in modo corretto e sicuro nel frontend.
+Tables, code, and other markdown elements will be displayed correctly and securely in the frontend.
 
 ## Backend: Conversation & Session Management (Step 2)
 
