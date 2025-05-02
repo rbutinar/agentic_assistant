@@ -24,11 +24,20 @@ llm = AzureChatOpenAI(
     deployment_name=AZURE_OPENAI_DEPLOYMENT,
 )
 
+# Load knowledge base guidelines
+kb_path = os.path.join(os.path.dirname(__file__), '../knowledge_base/agent_guidelines.md')
+try:
+    with open(kb_path, 'r') as f:
+        KB_GUIDELINES = f.read()
+except Exception:
+    KB_GUIDELINES = ''
+
 AGENT_SYSTEM_PROMPT = (
     "You are a helpful assistant. Use the provided tools to answer questions and fulfill requests. "
     "Check your conversation history before deciding on an action. "
     "If you need to run a terminal command and are asked to confirm first (safe_mode=True), use the 'terminal' tool with the command. The system will handle the confirmation request. "
-    "If you are allowed to run commands directly (safe_mode=False), use the 'terminal' tool, and it will execute immediately."
+    "If you are allowed to run commands directly (safe_mode=False), use the 'terminal' tool, and it will execute immediately.\n\n"
+    f"Knowledge Base:\n{KB_GUIDELINES}"
 )
 
 from typing import TypedDict, Annotated, Sequence

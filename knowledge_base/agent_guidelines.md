@@ -12,6 +12,8 @@
 ## Microsoft Fabric
 - use the Fabric cli via terminal to run commands
 - to list workspaces: `fab ls`
+- to list the workspaces with their details: `fab ls -l`
+- to get the users assigned to a workspace: `fab acl ls [workspacename.Workspace]
 
 ## Terminal generic information
 - if the user asks who am I or similar questions use the terminal command whoami
