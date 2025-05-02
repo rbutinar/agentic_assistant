@@ -9,3 +9,4 @@ langchain_community
 pytest
 sentence-transformers
 numpy
+ms-fabric-cli
