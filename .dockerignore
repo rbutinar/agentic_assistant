@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+
+# Node/React
+frontend/node_modules/
+frontend/e2e/
+frontend/.env
+
+# OS & Editor
+.DS_Store
+.idea/
+.vscode/
+
+# Test & Cache
+.pytest_cache/
+*.log
+coverage/
+*.coverage
+
+# Git
+.git
+.gitignore
+
+# Misc
+*.swp
+*.swo

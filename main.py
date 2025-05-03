@@ -38,10 +38,6 @@ sessions: Dict[str, List[dict]] = {}
 # In-memory pending tool actions (per session) - Still needed to track graph interrupts
 pending_tools: Dict[str, dict] = {}
 
-frontend_build_path = os.path.join(os.path.dirname(__file__), "frontend_build")
-if os.path.exists(frontend_build_path):
-    app.mount("/", StaticFiles(directory=frontend_build_path, html=True), name="static")
-
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
@@ -226,3 +222,7 @@ def get_log(session_id: str):
          
     log_entries = [LogEntry(**entry) for entry in log]
     return SessionLogResponse(session_id=session_id, log=log_entries)
+
+frontend_build_path = os.path.join(os.path.dirname(__file__), "frontend_build")
+if os.path.exists(frontend_build_path):
+    app.mount("/", StaticFiles(directory=frontend_build_path, html=True), name="static")
