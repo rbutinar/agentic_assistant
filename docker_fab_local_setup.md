@@ -4,6 +4,11 @@ This guide explains how to set up and reuse a Docker container named `agentic_as
 
 ---
 
+## 📝 TODO
+- Translate this guide to English for broader accessibility.
+
+---
+
 ## 1️⃣ Clean Any Existing Containers
 
 Before starting, remove any existing container with the same name to avoid conflicts:
