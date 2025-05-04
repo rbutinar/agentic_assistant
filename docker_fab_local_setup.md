@@ -62,6 +62,42 @@ fab auth login
 
 ---
 
+## 🚀 Running the App in Docker (with Environment Variables)
+
+By default, the Dockerfile is configured to automatically start the FastAPI backend with Uvicorn when the container runs. You do **not** need to run any further commands inside the container unless you override the default command.
+
+To start the backend automatically and load environment variables from your `.env` file, run:
+
+```bash
+docker run --name agentic_assistant \
+  --env-file .env \
+  -p 8000:8000 \
+  -p 127.0.0.1:35000-39999:35000-39999 \
+  -d agentic_assistant
+```
+
+- The `-d` flag runs the container in detached/background mode.
+- The backend will be available on http://localhost:8000.
+- All environment variables from `.env` will be loaded automatically.
+
+If you want an interactive shell instead (for debugging), you can override the default command:
+
+```bash
+docker run --name agentic_assistant \
+  --env-file .env \
+  -p 8000:8000 \
+  -p 127.0.0.1:35000-39999:35000-39999 \
+  -it agentic_assistant /bin/bash
+```
+
+In this case, you will need to manually start the backend with:
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+---
+
 ## 4️⃣ Reuse the Container in Future Sessions
 
 Instead of rebuilding or re-running:
@@ -87,6 +123,25 @@ To stop it when done:
 ```bash
 docker stop agentic_assistant
 ```
+
+---
+
+## ℹ️ Container Lifecycle Notes
+
+- Once a container is created with `docker run`, you can easily start and stop it using:
+  ```sh
+  docker start agentic_assistant
+  docker stop agentic_assistant
+  ```
+- **You cannot change ports, environment variables, or image after creation.**  
+  To use new parameters or an updated image:
+  1. Stop and remove the old container:
+     ```sh
+     docker stop agentic_assistant
+     docker rm agentic_assistant
+     ```
+  2. Create a new one with `docker run ...` and your desired parameters.
+- This makes iterative development and testing easy: update your image or config, then re-create the container as needed.
 
 ---
 

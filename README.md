@@ -139,6 +139,16 @@ Both are included in `requirements.txt`.
 - All agent actions, knowledge retrievals, and tool usage are logged in `agent/agent_session.log`.
 - Logging is session-aware and includes timestamps, session IDs, and event data.
 
+## Docker Usage
+
+### 🐳 Running with Docker
+
+For detailed Docker setup and lifecycle instructions, see [docker_fab_local_setup.md](./docker_fab_local_setup.md).
+
+- Quick start: `docker run ...`
+- Start/stop existing container: `docker start` / `docker stop`
+- To change ports/env/image: remove and re-create the container.
+
 ## Goals
 - Modular agentic architecture
 - Extensible tool/plugin system
