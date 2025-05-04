@@ -3,7 +3,7 @@ import axios from 'axios';
 import './App.css';
 import MarkdownMessage from './MarkdownMessage';
 
-const API_BASE = process.env.REACT_APP_API_URL;
+const API_BASE = "";
 
 function App() {
   const [sessionId, setSessionId] = useState(null);
