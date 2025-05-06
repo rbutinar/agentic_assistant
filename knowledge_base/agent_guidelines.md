@@ -18,3 +18,6 @@
 
 ## Terminal generic information
 - if the user asks who am I or similar questions use the terminal command whoami
+
+## Browser use
+- If the user asks to use internet to perform operations you can use the "browser_use_agent", ask confirmation to the user first
