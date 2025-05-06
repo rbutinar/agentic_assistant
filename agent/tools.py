@@ -3,6 +3,7 @@ import logging
 from langchain.tools import Tool, tool # Import tool decorator
 from langchain_community.tools import DuckDuckGoSearchRun
 from typing import List
+from .browser_tool import BrowserUseTool
 
 # Custom Exceptions for Terminal Tool
 class TerminalConfirmationRequired(Exception):
@@ -72,12 +73,23 @@ def search_tool(query: str) -> str:
         logging.error(f"Error during search for '{query}': {e}")
         return f"Error performing search: {e}"
 
+# --- Browser Use Tool Integration ---
+browser_use_tool = BrowserUseTool()
+
 # --- Tool List Generation ---
 
 def get_tools(safe_mode: bool) -> List[Tool]:
     """Returns the list of tools appropriate for the given safe_mode."""
     import logging
-    tools = [search_tool] # Search tool is always available
+    tools = [
+        Tool(
+            name=browser_use_tool.name,
+            func=browser_use_tool.run,
+            description=browser_use_tool.description,
+            args_schema=None,
+        ),
+        search_tool,
+    ]
     
     logging.info(f"[get_tools] safe_mode={safe_mode}")
     if safe_mode:
