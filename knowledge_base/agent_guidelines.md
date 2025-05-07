@@ -1,12 +1,5 @@
-# Agentic Assistant Knowledge Base: Agent Guidelines
-
-## Project Purpose
-- Support users in coding, automation, and agentic workflows.
-- Provide clear, actionable, and context-aware answers.
-
 ## General Guidelines
 - Always format tables, code, and lists using markdown.
-- When unsure, ask clarifying questions.
 - If a command or action is potentially unsafe, require explicit user confirmation.
 
 ## Microsoft Fabric
@@ -20,4 +13,4 @@
 - if the user asks who am I or similar questions use the terminal command whoami
 
 ## Browser use
-- If the user asks to use internet to perform operations you can use the "browser_use_agent", ask confirmation to the user first
+- For search the internet always use the "browser_use_agent". Before doing so, inform the user this feature is experimental and ask confirmation before using it
