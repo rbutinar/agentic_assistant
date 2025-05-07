@@ -7,6 +7,13 @@ A new project for developing an agentic AI coding assistant. This project will s
 - The backend will focus on agent orchestration, tool integration, and API endpoints.
 - The frontend will provide a modern, interactive UI for user interaction and agent management.
 
+## Features
+- **Autonomous Coding Agent:** Advanced agentic workflows for code generation and automation.
+- **Tool Integration:** Modular tool system for extending agent capabilities.
+- **Browser Use Agent:** Seamlessly automates browser tasks using a dedicated agent powered by Azure OpenAI. This agent can perform goal-oriented actions online, such as searching, navigating, and interacting with web content, all via secure Azure OpenAI credentials.
+- **Modern UI:** Interactive React frontend for chat, session management, and agent control.
+
+
 ## Setup
 ### Backend Setup (Step 1)
 
@@ -148,6 +155,17 @@ For detailed Docker setup and lifecycle instructions, see [docker_fab_local_setu
 - Quick start: `docker run ...`
 - Start/stop existing container: `docker start` / `docker stop`
 - To change ports/env/image: remove and re-create the container.
+
+## Open Points / TODO
+
+- **Azure OpenAI Key Support:**
+  - ✅ The agent and browser use agent now support Azure OpenAI credentials and endpoints for LLM tasks.
+
+- **Agent Stop/Kill Logic:**
+  - Implement a robust mechanism to stop or kill the browser agent process, especially for long-running or stuck executions. This may involve async cancellation, timeout handling, or explicit kill signals.
+
+- **General:**
+  - The browser agent is now successfully integrated and returns results to the main agent. Further improvements should address the above open points for production robustness.
 
 ## Goals
 - Modular agentic architecture
