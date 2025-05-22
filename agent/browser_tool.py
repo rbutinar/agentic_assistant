@@ -2,18 +2,13 @@ from langchain.tools import BaseTool
 from typing import Optional, Any
 import asyncio
 import os
-import sys
-
-# Add browser_use to sys.path if needed
-BROWSER_USE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../browser_use'))
-if BROWSER_USE_PATH not in sys.path:
-    sys.path.insert(0, BROWSER_USE_PATH)
-
+from langchain.tools import BaseTool
 from browser_use import Agent as BrowserAgent
 from langchain_openai import AzureChatOpenAI
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path=os.path.join(BROWSER_USE_PATH, '.env'))
+# Load environment variables from project root or specified location
+load_dotenv()
 
 class BrowserUseTool(BaseTool):
     name: str = "browser_use_agent"

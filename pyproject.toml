@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "browser_use"
+version = "0.1.0"
+description = "Browser automation agent for performing goal-oriented tasks online"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+dependencies = [
+    "playwright",
+    "langchain",
+    "langchain_openai",
+    "python-dotenv",
+    # Add other dependencies as needed
+]
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/browser_use"
+"Bug Tracker" = "https://github.com/yourusername/browser_use/issues"

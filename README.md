@@ -23,10 +23,17 @@ A new project for developing an agentic AI coding assistant. This project will s
 
 #### Installation
 1. Clone the repository and navigate to the project directory.
-2. Install dependencies:
+2. Create and activate a virtual environment (recommended):
+   ```sh
+   python3 -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+3. Install dependencies and local packages:
    ```sh
    python3 -m pip install -r requirements.txt
    ```
+   
+   This will automatically install the local `browser_use` package in development mode.
 
 #### Running the Backend
 Start the FastAPI server with:
