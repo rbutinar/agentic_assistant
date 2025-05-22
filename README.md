@@ -35,6 +35,13 @@ A new project for developing an agentic AI coding assistant. This project will s
    
    This will automatically install the local `browser_use` package in development mode.
 
+#### Installazione dei browser Playwright
+Dopo aver installato le dipendenze Python, esegui anche:
+```sh
+playwright install
+```
+Questo comando scarica i browser necessari per l’automazione (Chromium, Firefox, WebKit).
+
 #### Running the Backend
 Start the FastAPI server with:
 ```sh
