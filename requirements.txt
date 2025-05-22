@@ -10,7 +10,7 @@ pytest
 sentence-transformers
 numpy
 ms-fabric-cli
-
+duckduckgo-search
 # Local packages - install with: pip install -e .
 # This will install the browser_use package from the local directory
 -e .
