@@ -1,6 +1,6 @@
-from browser_use.logging_config import setup_logging
+from browser_use.utils.logging_utils import LoggingUtils
 
-setup_logging()
+LoggingUtils.setup_logging()
 
 from browser_use.agent.prompts import SystemPrompt as SystemPrompt
 from browser_use.agent.service import Agent as Agent

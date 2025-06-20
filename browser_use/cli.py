@@ -28,7 +28,7 @@ except ImportError:
 
 from browser_use import Agent, Browser, BrowserConfig, BrowserContextConfig, Controller
 from browser_use.agent.views import AgentSettings
-from browser_use.logging_config import addLoggingLevel
+from browser_use.utils.logging_utils import LoggingUtils
 
 # User settings file
 USER_CONFIG_FILE = Path.home() / '.browser_use.json'
@@ -413,11 +413,8 @@ class BrowserUseApp(App):
 
 	def setup_richlog_logging(self) -> None:
 		"""Set up logging to redirect to RichLog widget instead of stdout."""
-		# Try to add RESULT level if it doesn't exist
-		try:
-			addLoggingLevel('RESULT', 35)
-		except AttributeError:
-			pass  # Level already exists, which is fine
+		# Add RESULT level using LoggingUtils
+		LoggingUtils._add_logging_level('RESULT', 35)
 
 		# Get the RichLog widget
 		rich_log = self.query_one('#results-log')

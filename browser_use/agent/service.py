@@ -10,7 +10,6 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
-from dotenv import load_dotenv
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
 	BaseMessage,
@@ -63,10 +62,11 @@ from browser_use.telemetry.views import (
 )
 from browser_use.utils import check_env_variables, time_execution_async, time_execution_sync
 
-load_dotenv()
-logger = logging.getLogger(__name__)
+from browser_use.utils.config_utils import ConfigManager
 
-SKIP_LLM_API_KEY_VERIFICATION = os.environ.get('SKIP_LLM_API_KEY_VERIFICATION', 'false').lower()[0] in 'ty1'
+logger = logging.getLogger(__name__)
+config_manager = ConfigManager()
+SKIP_LLM_API_KEY_VERIFICATION = config_manager.get_env_var('SKIP_LLM_API_KEY_VERIFICATION', 'false').lower()[0] in 'ty1'
 
 
 def log_response(response: AgentOutput) -> None:

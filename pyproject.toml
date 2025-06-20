@@ -3,9 +3,9 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "browser_use"
-version = "0.1.0"
-description = "Browser automation agent for performing goal-oriented tasks online"
+name = "agentic_assistant"
+version = "0.4.0"
+description = "AI-powered assistant with browser automation capabilities"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
@@ -21,5 +21,5 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/yourusername/browser_use"
-"Bug Tracker" = "https://github.com/yourusername/browser_use/issues"
+"Homepage" = "https://github.com/yourusername/agentic_assistant"
+"Bug Tracker" = "https://github.com/yourusername/agentic_assistant/issues"
