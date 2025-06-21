@@ -5,10 +5,11 @@ import uvicorn
 from agentic_assistant.api.endpoints import create_app
 from agentic_assistant.core.config import config
 
+# Create app instance for uvicorn
+app = create_app()
 
 def main():
     """Main application entry point."""
-    app = create_app()
     app_config = config.get_app_config()
     
     # Configure logging

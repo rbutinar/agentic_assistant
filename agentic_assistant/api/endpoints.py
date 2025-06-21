@@ -89,6 +89,11 @@ def create_app() -> FastAPI:
             "safe_mode": request.safe_mode
         })
         
+        # Add user message to session (unless it's a confirmation message)
+        if not request.message.lower().startswith("[terminal confirm]:"):
+            user_message = {"role": "user", "content": request.message}
+            session_manager.add_message(request.session_id, user_message)
+        
         # Process user input
         graph_input, confirmed_command, graph_safe_mode = chat_processor.process_user_input(
             request.message, request.session_id, request.safe_mode
@@ -139,7 +144,21 @@ def create_app() -> FastAPI:
             pending_info = {"command": tce.command}
         except Exception as e:
             log_step(request.session_id, "agent_error", {"error": str(e)}, level="ERROR")
-            error_message = {"role": "assistant", "content": f"An error occurred: {str(e)}"}
+            
+            # Handle Azure OpenAI content filter errors more carefully
+            error_str = str(e)
+            if "content_filter" in error_str or "ResponsibleAIPolicyViolation" in error_str:
+                # Check if this was likely a false positive for common safe commands
+                user_input_lower = str(graph_input).lower() if graph_input else ""
+                safe_commands = ["whoami", "pwd", "ls", "dir", "date", "time", "echo", "cat", "type", "which", "where"]
+                
+                if any(cmd in user_input_lower for cmd in safe_commands):
+                    error_message = {"role": "assistant", "content": "The content filter blocked this request, but it appears to be a safe system command. You can try executing it directly or contact support if this persists."}
+                else:
+                    error_message = {"role": "assistant", "content": "Sorry, I cannot process this request due to content policy restrictions. Please try rephrasing your request."}
+            else:
+                error_message = {"role": "assistant", "content": f"An error occurred while processing your request. Please try again."}
+                
             session_manager.add_message(request.session_id, error_message)
             session_manager.clear_pending_tool(request.session_id)
             pending_info = None

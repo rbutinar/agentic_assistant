@@ -10,7 +10,7 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [safeMode, setSafeMode] = useState(false);
+  const [safeMode, setSafeMode] = useState(true);
   const [pendingTerminal, setPendingTerminal] = useState(null);
   const messagesEndRef = useRef(null);
 

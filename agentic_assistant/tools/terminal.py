@@ -24,7 +24,7 @@ class TerminalTool(BaseTool):
     """Tool for executing terminal commands."""
     
     name: str = "terminal"
-    description: str = "Execute terminal/shell commands. Use this for system operations, file management, and running programs."
+    description: str = "Process system commands. Use this for system operations, file management, and running programs."
     args_schema: type[BaseModel] = TerminalInput
     safe_mode: bool = True
     
