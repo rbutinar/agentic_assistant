@@ -1,17 +1,23 @@
 """
 Browser integration tool using the browser_use library.
 """
+import asyncio
 from typing import Any, Dict, Optional
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
 try:
-    from browser_use import Agent as BrowserUseAgent, Browser
+    from browser_use import Agent as BrowserUseAgent, Browser, BrowserConfig
     from browser_use.browser.context import BrowserContextConfig
-except ImportError:
+    BROWSER_USE_AVAILABLE = True
+    IMPORT_ERROR = None
+except ImportError as e:
     BrowserUseAgent = None
     Browser = None
+    BrowserConfig = None
     BrowserContextConfig = None
+    BROWSER_USE_AVAILABLE = False
+    IMPORT_ERROR = str(e)
 
 
 class BrowserInput(BaseModel):
@@ -34,32 +40,47 @@ class BrowserIntegrationTool(BaseTool):
     def __init__(self, llm=None, **kwargs):
         super().__init__(llm=llm, browser=None, agent=None, **kwargs)
         
-    def _ensure_browser_initialized(self) -> bool:
+    def _ensure_browser_initialized(self) -> tuple[bool, str]:
         """Ensure browser and agent are initialized."""
-        if BrowserUseAgent is None:
-            return False
+        if not BROWSER_USE_AVAILABLE:
+            return False, f"browser_use library not available. Import error: {IMPORT_ERROR}. Please install required dependencies: pip install python-dotenv playwright && playwright install"
             
-        if self.browser is None:
-            self.browser = Browser(
-                config=BrowserContextConfig(
+        try:
+            if self.browser is None:
+                # Create BrowserConfig with context configuration
+                browser_config = BrowserConfig(
                     headless=True,
                     disable_security=True
                 )
-            )
+                # Set the context configuration
+                context_config = BrowserContextConfig(
+                    headless=True,
+                    disable_security=True
+                )
+                browser_config.new_context_config = context_config
+                
+                self.browser = Browser(config=browser_config)
+                
+        except Exception as e:
+            return False, f"Failed to initialize browser: {str(e)}. Try running: playwright install"
             
-        if self.agent is None and self.llm is not None:
-            self.agent = BrowserUseAgent(
-                task="",  # Will be set per action
-                llm=self.llm,
-                browser=self.browser
-            )
+        try:
+            if self.agent is None and self.llm is not None:
+                self.agent = BrowserUseAgent(
+                    task="",  # Will be set per action
+                    llm=self.llm,
+                    browser=self.browser
+                )
+        except Exception as e:
+            return False, f"Failed to initialize browser agent: {str(e)}"
             
-        return True
+        return True, "Browser initialized successfully"
     
     def _run(self, action: str, target: str, value: str = "") -> str:
         """Execute browser action using browser_use."""
-        if not self._ensure_browser_initialized():
-            return "Error: browser_use library not available. Please install it."
+        initialized, message = self._ensure_browser_initialized()
+        if not initialized:
+            return f"Error: {message}"
             
         try:
             if action.lower() == "navigate":
@@ -79,8 +100,21 @@ class BrowserIntegrationTool(BaseTool):
             # Update the task for this specific action
             self.agent.task = task
             
-            # Execute the browser task
-            result = self.agent.run(max_steps=3)
+            # Execute the browser task - run async method in sync context
+            try:
+                # Try to get the current event loop
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If loop is running, we need to run in a thread
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(asyncio.run, self.agent.run(max_steps=3))
+                        result = future.result()
+                else:
+                    result = loop.run_until_complete(self.agent.run(max_steps=3))
+            except RuntimeError:
+                # No event loop exists, create one
+                result = asyncio.run(self.agent.run(max_steps=3))
             
             return f"Browser action completed: {task}\nResult: {result}"
             

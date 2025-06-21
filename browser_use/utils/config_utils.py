@@ -87,4 +87,9 @@ class ConfigManager:
         return {
             "level": os.getenv("BROWSER_USE_LOGGING_LEVEL", "info").lower(),
             "format": os.getenv("BROWSER_USE_LOG_FORMAT", "standard"),
-        } 
+        }
+    
+    @staticmethod
+    def get_env_var(var_name: str, default: str = "") -> str:
+        """Get environment variable with default value."""
+        return os.getenv(var_name, default) 
