@@ -16,13 +16,13 @@ def main():
     from browser_use.utils.logging_utils import LoggingUtils
     LoggingUtils.setup_logging(log_type=app_config.log_level)
     
-    # Run the application
+    # Run the application - reload disabled to prevent infinite loop in Windows/WSL
     uvicorn.run(
         app,
         host="0.0.0.0",
         port=8000,
         log_level=app_config.log_level,
-        reload=app_config.debug
+        reload=False  # Disabled due to WSL/Windows compatibility issues
     )
 
 

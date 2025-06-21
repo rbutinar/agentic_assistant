@@ -42,6 +42,10 @@ function App() {
     setLoading(true);
 
     const currentInput = input.trim();
+    
+    // Add user message immediately to prevent it from disappearing
+    const userMessage = { role: 'user', content: currentInput };
+    setMessages(prevMessages => [...prevMessages, userMessage]);
     setInput('');
 
     try {
@@ -51,7 +55,15 @@ function App() {
         safe_mode: safeMode,
       });
 
-      setMessages(resp.data.messages);
+      // Only add new assistant messages, don't replace all messages
+      const newAssistantMessages = resp.data.messages.filter(msg => 
+        msg.role === 'assistant' && 
+        !messages.some(existingMsg => 
+          existingMsg.role === 'assistant' && existingMsg.content === msg.content
+        )
+      );
+      
+      setMessages(prevMessages => [...prevMessages, ...newAssistantMessages]);
 
       if (resp.data.pending_command) {
         setPendingTerminal({ command: resp.data.pending_command });
