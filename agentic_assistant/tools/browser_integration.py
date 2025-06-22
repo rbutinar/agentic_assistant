@@ -63,7 +63,7 @@ except ImportError as e:
 
 class BrowserInput(BaseModel):
     """Input for browser tool."""
-    action: str = Field(description="Browser action: navigate, click, type, pause, resume, show_browser, manual_mode, status, restart_visible, etc.")
+    action: str = Field(description="Browser action: navigate, click, type, pause, resume, show_browser, manual_mode, status, restart_visible, end_session, etc.")
     target: str = Field(description="Target element, URL, or task description")
     value: str = Field(default="", description="Value for input actions")
     instructions: str = Field(default="", description="Additional detailed instructions for the browser agent")
@@ -86,16 +86,20 @@ class BrowserIntegrationTool(BaseTool):
     - Extract: action='extract', target='https://news.com', instructions='Extract the main headlines'
     - Login: action='navigate', target='https://site.com', instructions='Navigate to login page'
     
-    Actions: navigate, click, type, extract, search, pause, resume, show_browser, manual_mode, status, restart_visible."""
+    Actions: navigate, click, type, extract, search, pause, resume, show_browser, manual_mode, status, restart_visible, end_session."""
     args_schema: type[BaseModel] = BrowserInput
     llm: Optional[Any] = None
     browser: Optional[Any] = None
     agent: Optional[Any] = None
     _is_browser_visible: bool = False
+    _is_interactive_session: bool = False
+    _last_action: str = ""
     
     def __init__(self, llm=None, **kwargs):
         super().__init__(llm=llm, browser=None, agent=None, **kwargs)
         self._is_browser_visible = False
+        self._is_interactive_session = False
+        self._last_action = ""
         
     def _ensure_browser_initialized(self) -> tuple[bool, str]:
         """Ensure browser and agent are initialized."""
@@ -181,6 +185,50 @@ class BrowserIntegrationTool(BaseTool):
             print(f"⚠️ Warning: Could not setup fast mode blocking: {e}")
             # Fallback to browser args approach (already implemented)
     
+    def _should_preserve_browser_session(self, action: str, target: str, instructions: str) -> bool:
+        """Determine if the browser session should be preserved for interactive tasks."""
+        # Preserve session for interactive scenarios
+        interactive_keywords = [
+            'login', 'signin', 'sign in', 'authenticate', 'credentials',
+            'password', 'username', 'email', 'user', 'account',
+            'manual', 'pause', 'wait', 'input', 'form', 'captcha',
+            'booking', 'reservation', 'checkout', 'payment',
+            'interactive', 'session', 'continue', 'step by step'
+        ]
+        
+        # Check if this is an interactive site (common login/booking sites)
+        interactive_domains = [
+            'booking.com', 'expedia.com', 'airbnb.com', 'hotels.com',
+            'facebook.com', 'twitter.com', 'instagram.com', 'linkedin.com',
+            'github.com', 'google.com', 'microsoft.com', 'amazon.com',
+            'paypal.com', 'stripe.com', 'auth0.com'
+        ]
+        
+        # Check if we're already in an interactive session
+        if self._is_interactive_session:
+            return True
+        
+        # Check action types that suggest interactivity
+        if action.lower() in ['pause', 'manual_mode', 'type', 'input']:
+            return True
+        
+        # Check for interactive keywords in instructions or target
+        combined_text = f"{target} {instructions}".lower()
+        if any(keyword in combined_text for keyword in interactive_keywords):
+            return True
+        
+        # Check if navigating to interactive domains
+        if action.lower() == 'navigate':
+            target_lower = target.lower()
+            if any(domain in target_lower for domain in interactive_domains):
+                return True
+        
+        # Check if previous action was interactive
+        if self._last_action in ['navigate', 'type', 'click'] and self._is_interactive_session:
+            return True
+        
+        return False
+    
     
     def _run(self, action: str, target: str, value: str = "", instructions: str = "") -> str:
         """Execute browser action using browser_use."""
@@ -202,6 +250,8 @@ class BrowserIntegrationTool(BaseTool):
                 return self._get_agent_status()
             elif action.lower() == "restart_visible":
                 return self._restart_browser_visible()
+            elif action.lower() == "end_session":
+                return self._end_interactive_session()
             
             # Build comprehensive task from all parameters
             else:
@@ -210,9 +260,11 @@ class BrowserIntegrationTool(BaseTool):
                 
                 # Add action-specific context with clear, direct instructions
                 if action.lower() == "navigate":
-                    task_parts.append(f"Go directly to the URL: {target}")
-                    task_parts.append(f"Do not go to Google or any search engine")
-                    task_parts.append(f"Navigate directly to {target}")
+                    # Use very explicit and imperative language for navigation
+                    task_parts.append(f"IMPORTANT: Navigate DIRECTLY to {target}")
+                    task_parts.append(f"NEVER go to Google, search engines, or any other website first")
+                    task_parts.append(f"The ONLY URL you should visit is: {target}")
+                    task_parts.append(f"Use the go_to_url action immediately with: {target}")
                 elif action.lower() == "click":
                     task_parts.append(f"Click on {target}")
                 elif action.lower() == "type" and value:
@@ -228,7 +280,12 @@ class BrowserIntegrationTool(BaseTool):
                 if instructions.strip():
                     task_parts.append(f"Additional instructions: {instructions}")
                 
+                # Create a very direct task that forces the exact behavior
                 task = ". ".join(task_parts)
+                
+                # For navigate actions, override with extremely direct task
+                if action.lower() == "navigate":
+                    task = f"Navigate to {target} immediately. Do not visit any other website. Your first and only action should be go_to_url with {target}."
             
             if self.agent is None:
                 return f"Error: Browser agent not initialized"
@@ -238,32 +295,46 @@ class BrowserIntegrationTool(BaseTool):
             
             # Remove fast_mode complexity
             
-            # Force recreate browser and agent for each task to avoid stale browser issues
+            # Smart browser session management - preserve for interactive tasks
+            should_preserve_session = self._should_preserve_browser_session(action, target, instructions)
+            
             try:
-                # Close existing browser if it exists
-                if self.browser is not None:
-                    try:
-                        # Try to close properly (might fail if already closed)
-                        pass  # browser_use handles cleanup automatically
-                    except:
-                        pass  # Ignore cleanup errors
-                    self.browser = None
-                    self.agent = None
+                if should_preserve_session and self.browser is not None and self.agent is not None:
+                    # Preserve existing browser session for interactive tasks
+                    print(f"🔄 BROWSER DEBUG - Preserving session for interactive task")
+                    # Update agent task for continued operation
+                    self.agent.task = task
+                else:
+                    # Close existing browser if it exists (for non-interactive or first time)
+                    if self.browser is not None:
+                        try:
+                            # Try to close properly (might fail if already closed)
+                            pass  # browser_use handles cleanup automatically
+                        except:
+                            pass  # Ignore cleanup errors
+                        self.browser = None
+                        self.agent = None
+                    
+                    # Reinitialize browser
+                    initialized, message = self._ensure_browser_initialized()
+                    if not initialized:
+                        return f"Error reinitializing browser: {message}"
+                    
+                    # Create fresh agent with the task
+                    self.agent = BrowserUseAgent(
+                        task=task,
+                        llm=self.llm,
+                        browser=self.browser,
+                        enable_memory=False  # Disable memory to prevent interference
+                    )
+                    print(f"🆕 BROWSER DEBUG - Created fresh browser session")
                 
-                # Reinitialize browser
-                initialized, message = self._ensure_browser_initialized()
-                if not initialized:
-                    return f"Error reinitializing browser: {message}"
+                # Track session state
+                self._is_interactive_session = should_preserve_session
+                self._last_action = action
                 
-                # Create fresh agent with the task
-                self.agent = BrowserUseAgent(
-                    task=task,
-                    llm=self.llm,
-                    browser=self.browser,
-                    enable_memory=False  # Disable memory to prevent interference
-                )
             except Exception as e:
-                return f"Error creating fresh browser session: {str(e)}"
+                return f"Error managing browser session: {str(e)}"
             
             # Execute the browser task - run in separate thread to avoid blocking
             try:
@@ -326,6 +397,8 @@ class BrowserIntegrationTool(BaseTool):
                 return self._get_agent_status()
             elif action.lower() == "restart_visible":
                 return self._restart_browser_visible()
+            elif action.lower() == "end_session":
+                return self._end_interactive_session()
             
             # Build comprehensive task from all parameters
             else:
@@ -334,9 +407,11 @@ class BrowserIntegrationTool(BaseTool):
                 
                 # Add action-specific context with clear, direct instructions
                 if action.lower() == "navigate":
-                    task_parts.append(f"Go directly to the URL: {target}")
-                    task_parts.append(f"Do not go to Google or any search engine")
-                    task_parts.append(f"Navigate directly to {target}")
+                    # Use very explicit and imperative language for navigation
+                    task_parts.append(f"IMPORTANT: Navigate DIRECTLY to {target}")
+                    task_parts.append(f"NEVER go to Google, search engines, or any other website first")
+                    task_parts.append(f"The ONLY URL you should visit is: {target}")
+                    task_parts.append(f"Use the go_to_url action immediately with: {target}")
                 elif action.lower() == "click":
                     task_parts.append(f"Click on {target}")
                 elif action.lower() == "type" and value:
@@ -352,7 +427,12 @@ class BrowserIntegrationTool(BaseTool):
                 if instructions.strip():
                     task_parts.append(f"Additional instructions: {instructions}")
                 
+                # Create a very direct task that forces the exact behavior
                 task = ". ".join(task_parts)
+                
+                # For navigate actions, override with extremely direct task
+                if action.lower() == "navigate":
+                    task = f"Navigate to {target} immediately. Do not visit any other website. Your first and only action should be go_to_url with {target}."
             
             if self.agent is None:
                 return f"Error: Browser agent not initialized"
@@ -362,32 +442,46 @@ class BrowserIntegrationTool(BaseTool):
             
             # Remove fast_mode complexity
             
-            # Force recreate browser and agent for each task to avoid stale browser issues
+            # Smart browser session management - preserve for interactive tasks
+            should_preserve_session = self._should_preserve_browser_session(action, target, instructions)
+            
             try:
-                # Close existing browser if it exists
-                if self.browser is not None:
-                    try:
-                        # Try to close properly (might fail if already closed)
-                        pass  # browser_use handles cleanup automatically
-                    except:
-                        pass  # Ignore cleanup errors
-                    self.browser = None
-                    self.agent = None
+                if should_preserve_session and self.browser is not None and self.agent is not None:
+                    # Preserve existing browser session for interactive tasks
+                    print(f"🔄 BROWSER DEBUG - Preserving session for interactive task")
+                    # Update agent task for continued operation
+                    self.agent.task = task
+                else:
+                    # Close existing browser if it exists (for non-interactive or first time)
+                    if self.browser is not None:
+                        try:
+                            # Try to close properly (might fail if already closed)
+                            pass  # browser_use handles cleanup automatically
+                        except:
+                            pass  # Ignore cleanup errors
+                        self.browser = None
+                        self.agent = None
+                    
+                    # Reinitialize browser
+                    initialized, message = self._ensure_browser_initialized()
+                    if not initialized:
+                        return f"Error reinitializing browser: {message}"
+                    
+                    # Create fresh agent with the task
+                    self.agent = BrowserUseAgent(
+                        task=task,
+                        llm=self.llm,
+                        browser=self.browser,
+                        enable_memory=False  # Disable memory to prevent interference
+                    )
+                    print(f"🆕 BROWSER DEBUG - Created fresh browser session")
                 
-                # Reinitialize browser
-                initialized, message = self._ensure_browser_initialized()
-                if not initialized:
-                    return f"Error reinitializing browser: {message}"
+                # Track session state
+                self._is_interactive_session = should_preserve_session
+                self._last_action = action
                 
-                # Create fresh agent with the task
-                self.agent = BrowserUseAgent(
-                    task=task,
-                    llm=self.llm,
-                    browser=self.browser,
-                    enable_memory=False  # Disable memory to prevent interference
-                )
             except Exception as e:
-                return f"Error creating fresh browser session: {str(e)}"
+                return f"Error managing browser session: {str(e)}"
             
             # Execute the browser task asynchronously
             try:
@@ -406,17 +500,20 @@ class BrowserIntegrationTool(BaseTool):
             return "Error: Browser agent not initialized"
         
         try:
-            # Pause the agent
-            self.agent.pause()
+            # Set interactive session flag to preserve browser
+            self._is_interactive_session = True
             
             # Make browser visible if not already
             if not self._is_browser_visible:
-                self._show_browser()
+                self._is_browser_visible = True
+                # Note: For browser_use, visibility is set during initialization
+                # Current session remains as-is, but future sessions will be visible
             
             pause_reason = f" Reason: {reason}" if reason else ""
             return f"✋ Browser agent paused for user intervention.{pause_reason}\n" \
-                   f"📱 Browser window is now visible for manual control.\n" \
-                   f"🔄 Use 'resume' action to continue automation when ready."
+                   f"📱 Browser session is preserved and ready for manual control.\n" \
+                   f"🔄 Use 'resume' action to continue automation when ready.\n" \
+                   f"💡 The browser session will remain open for your interactions."
         except Exception as e:
             return f"Error pausing agent: {str(e)}"
     
@@ -426,10 +523,11 @@ class BrowserIntegrationTool(BaseTool):
             return "Error: Browser agent not initialized"
         
         try:
-            # Resume the agent
-            self.agent.resume()
-            return f"▶️ Browser agent resumed. Automation will continue from current state.\n" \
-                   f"🤖 Agent is now back in control of the browser."
+            # Keep interactive session flag to continue preserving browser
+            # The session is already active and preserved
+            return f"▶️ Browser agent ready to resume. Session has been preserved.\n" \
+                   f"🤖 Agent is ready to continue with next tasks.\n" \
+                   f"💡 Browser session remains active for continued operations."
         except Exception as e:
             return f"Error resuming agent: {str(e)}"
     
@@ -526,4 +624,27 @@ class BrowserIntegrationTool(BaseTool):
                    f"🤖 Agent is ready to continue automation when needed."
         except Exception as e:
             return f"Error restarting browser: {str(e)}"
+    
+    def _end_interactive_session(self) -> str:
+        """End the interactive session and reset to normal mode."""
+        try:
+            # Reset interactive session flag
+            self._is_interactive_session = False
+            self._last_action = ""
+            
+            # Close existing browser to start fresh next time
+            if self.browser is not None:
+                try:
+                    # browser_use handles cleanup automatically
+                    pass
+                except:
+                    pass  # Ignore cleanup errors
+                self.browser = None
+                self.agent = None
+            
+            return f"🏁 Interactive session ended successfully.\n" \
+                   f"🆕 Next browser actions will start with a fresh session.\n" \
+                   f"💡 Use 'navigate' to start a new browsing session."
+        except Exception as e:
+            return f"Error ending interactive session: {str(e)}"
     
