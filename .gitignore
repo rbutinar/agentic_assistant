@@ -6,6 +6,8 @@ __pycache__/
 .env
 .venv/
 venv/
+venv_win/
+venv_wsl/
 build/
 dist/
 *.egg-info/
@@ -28,3 +30,5 @@ playwright-report/
 *.log
 !agent/agent_session.log
 agent/agent_session.log
+*.pdf
+get-pip.py

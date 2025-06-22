@@ -13,4 +13,4 @@
 - if the user asks who am I or similar questions use the terminal command whoami
 
 ## Browser use
-- For web seaches you can use duckduckgo_search, for more articulated operations on the web you can use browser_use. Before using the browser agent inform the user this is experimental and ask confirmation before using it.
+- For web seaches you can use duckduckgo_search, for more articulated operations on the web you can use browser_use.
